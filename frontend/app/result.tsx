@@ -27,11 +27,16 @@ export default function ResultScreen() {
   const totalQuestions = parseInt(params.totalQuestions as string) || 25;
   const questionsAnswered = parseInt(params.questionsAnswered as string) || 0;
   const isNewRecord = params.isNewRecord === '1';
-  const bestScore = parseInt(params.bestScore as string) || initialScore;
+  const initialBestScore = parseInt(params.bestScore as string) || initialScore;
   
-  const [score, setScore] = useState(initialScore);
+  const [displayScore, setDisplayScore] = useState(initialScore);
+  const [bestScore, setBestScore] = useState(initialBestScore);
   const [hasUsedMultiplier, setHasUsedMultiplier] = useState(false);
   const [interstitialShown, setInterstitialShown] = useState(false);
+  const [isNewRecordAfterMultiplier, setIsNewRecordAfterMultiplier] = useState(isNewRecord);
+  
+  // Ref ile güncel score'u takip et (closure sorunu için)
+  const currentScoreRef = useRef(initialScore);
   
   const scaleAnim = useRef(new Animated.Value(0)).current;
   const sparkleAnim = useRef(new Animated.Value(0)).current;
@@ -53,7 +58,7 @@ export default function ResultScreen() {
     }).start();
     
     // Sparkle animation for new record
-    if (isNewRecord) {
+    if (isNewRecord || isNewRecordAfterMultiplier) {
       Animated.loop(
         Animated.sequence([
           Animated.timing(sparkleAnim, { toValue: 1, duration: 500, useNativeDriver: true }),
@@ -63,13 +68,15 @@ export default function ResultScreen() {
     }
     
     // Pulse animation for multiplier button
-    Animated.loop(
-      Animated.sequence([
-        Animated.timing(multiplierAnim, { toValue: 1.1, duration: 600, useNativeDriver: true }),
-        Animated.timing(multiplierAnim, { toValue: 1, duration: 600, useNativeDriver: true }),
-      ])
-    ).start();
-  }, []);
+    if (!hasUsedMultiplier) {
+      Animated.loop(
+        Animated.sequence([
+          Animated.timing(multiplierAnim, { toValue: 1.1, duration: 600, useNativeDriver: true }),
+          Animated.timing(multiplierAnim, { toValue: 1, duration: 600, useNativeDriver: true }),
+        ])
+      ).start();
+    }
+  }, [isNewRecordAfterMultiplier, hasUsedMultiplier]);
 
   // 3X Ödüllü reklam izle
   const handleWatchAd = async () => {
@@ -78,33 +85,64 @@ export default function ResultScreen() {
       return;
     }
 
+    // initialScore'u kullan (closure sorunu yok)
+    const multipliedScore = initialScore * 3;
+    
     await showRewarded(async () => {
-      // Reklam izlendi, puanı 3'e katla
-      const newScore = score * 3;
-      setScore(newScore);
+      console.log('[3X] Reklam izlendi, puan katlama başlıyor');
+      console.log('[3X] Orijinal puan:', initialScore);
+      console.log('[3X] Yeni puan:', multipliedScore);
+      
+      // State'leri güncelle
+      setDisplayScore(multipliedScore);
+      currentScoreRef.current = multipliedScore;
       setHasUsedMultiplier(true);
       
       // Yeni skoru backend'e kaydet
       try {
+        let result;
         if (mode === 'mixed') {
-          await submitMixedScore(newScore, correctCount, speedBonus, questionsAnswered);
+          console.log('[3X] Mixed skor gönderiliyor:', multipliedScore);
+          result = await submitMixedScore(multipliedScore, correctCount, speedBonus, questionsAnswered);
         } else {
-          await submitEpisodeScore(episodeId, newScore, correctCount, speedBonus);
+          console.log('[3X] Episode skor gönderiliyor:', multipliedScore, 'Episode:', episodeId);
+          result = await submitEpisodeScore(episodeId, multipliedScore, correctCount, speedBonus);
         }
+        
+        console.log('[3X] Backend yanıtı:', result);
+        
+        // Best score'u güncelle
+        if (result && result.best_score) {
+          setBestScore(result.best_score);
+        } else {
+          // Backend yanıt vermezse manuel güncelle
+          setBestScore(Math.max(bestScore, multipliedScore));
+        }
+        
+        // Yeni rekor mu kontrol et
+        if (result && result.is_new_record) {
+          setIsNewRecordAfterMultiplier(true);
+        } else if (multipliedScore > initialBestScore) {
+          setIsNewRecordAfterMultiplier(true);
+        }
+        
       } catch (e) {
-        console.error('Error updating score:', e);
+        console.error('[3X] Skor kaydetme hatası:', e);
+        // Hata olsa bile UI'ı güncelle
+        setBestScore(Math.max(bestScore, multipliedScore));
       }
       
-      Alert.alert('🎉 Tebrikler!', `Puanınız 3X katlandı!\n${initialScore} → ${newScore}`);
+      Alert.alert(
+        '🎉 Tebrikler!', 
+        `Puanınız 3X katlandı!\n\n${initialScore} → ${multipliedScore}\n\nLiderlik tablosu güncellendi!`
+      );
     });
   };
 
-  const handleNextEpisode = () => {
-    if (episodeId < 14) {
-      router.replace(`/quiz?mode=episode&episode=${episodeId + 1}`);
-    } else {
-      router.replace('/episodes');
-    }
+  const handleNextEpisode = async () => {
+    // Dinamik olarak maksimum bölüm sayısını kontrol etmek yerine
+    // sabit bir değer kullanıyoruz, backend zaten kontrol ediyor
+    router.replace(`/quiz?mode=episode&episode=${episodeId + 1}`);
   };
 
   const handlePlayAgain = () => {
@@ -123,11 +161,14 @@ export default function ResultScreen() {
     }
   };
 
+  // Gösterilecek en iyi skor
+  const displayBestScore = Math.max(bestScore, displayScore);
+
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.content}>
         {/* New Record Badge */}
-        {isNewRecord && (
+        {(isNewRecord || isNewRecordAfterMultiplier) && (
           <Animated.View style={[styles.newRecordBadge, { opacity: sparkleAnim }]}>
             <Ionicons name="trophy" size={24} color="#ffc107" />
             <Text style={styles.newRecordText}>YENİ REKOR!</Text>
@@ -139,7 +180,7 @@ export default function ResultScreen() {
           <Text style={styles.scoreLabel}>SKOR</Text>
           <View style={styles.scoreRow}>
             <Text style={[styles.scoreValue, hasUsedMultiplier && styles.multipliedScore]}>
-              {score}
+              {displayScore}
             </Text>
             {!hasUsedMultiplier && (
               <Animated.View style={{ transform: [{ scale: multiplierAnim }] }}>
@@ -155,7 +196,7 @@ export default function ResultScreen() {
             )}
           </View>
           {hasUsedMultiplier && (
-            <Text style={styles.multipliedLabel}>3X BONUS UYGULANDI!</Text>
+            <Text style={styles.multipliedLabel}>✨ 3X BONUS UYGULANDI!</Text>
           )}
         </Animated.View>
 
@@ -193,12 +234,12 @@ export default function ResultScreen() {
           <Text style={styles.bestScoreLabel}>
             {mode === 'episode' ? `${episodeId}. Bölüm En İyi Skor` : 'Karışık Mod En İyi'}
           </Text>
-          <Text style={styles.bestScoreValue}>{Math.max(bestScore, score)}</Text>
+          <Text style={styles.bestScoreValue}>{displayBestScore}</Text>
         </View>
 
         {/* Buttons */}
         <View style={styles.buttonsContainer}>
-          {mode === 'episode' && episodeId < 17 && (
+          {mode === 'episode' && (
             <TouchableOpacity style={styles.primaryButton} onPress={handleNextEpisode}>
               <Ionicons name="arrow-forward" size={24} color="#fff" />
               <Text style={styles.primaryButtonText}>Sonraki Bölüm</Text>
