@@ -311,8 +311,15 @@ async def get_episodes():
 @api_router.get("/quiz/episode/{episode_id}", response_model=QuizResponse)
 async def get_episode_quiz(episode_id: int, count: int = 25):
     """Get quiz questions for a specific episode (25 questions)"""
-    if episode_id < 1 or episode_id > 14:
-        raise HTTPException(status_code=400, detail="Geçersiz bölüm ID (1-14)")
+    if episode_id < 1:
+        raise HTTPException(status_code=400, detail="Geçersiz bölüm ID")
+    
+    # Dinamik olarak mevcut bölümleri kontrol et
+    episodes = await get_episodes_data()
+    valid_episode_ids = [e.id for e in episodes if not e.is_locked]
+    
+    if episode_id not in valid_episode_ids:
+        raise HTTPException(status_code=400, detail=f"Bölüm {episode_id} bulunamadı veya kilitli")
     
     questions_data = await get_questions_data()
     episode_questions = questions_data.get(episode_id, [])
