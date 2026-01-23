@@ -1,7 +1,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 // Use environment variable for backend URL
-const API_URL = process.env.EXPO_PUBLIC_BACKEND_URL || 'https://citygame-1.preview.emergentagent.com';
+const API_URL = process.env.EXPO_PUBLIC_BACKEND_URL || 'https://quizville-1.preview.emergentagent.com';
 
 // Storage keys - Uzak Şehir
 const STORAGE_KEYS = {

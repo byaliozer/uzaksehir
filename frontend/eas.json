@@ -8,7 +8,7 @@
       "developmentClient": true,
       "distribution": "internal",
       "env": {
-        "EXPO_PUBLIC_BACKEND_URL": "https://citygame-1.preview.emergentagent.com"
+        "EXPO_PUBLIC_BACKEND_URL": "https://quizville-1.preview.emergentagent.com"
       },
       "android": {
         "buildType": "apk",
@@ -18,7 +18,7 @@
     "preview": {
       "distribution": "internal",
       "env": {
-        "EXPO_PUBLIC_BACKEND_URL": "https://citygame-1.preview.emergentagent.com"
+        "EXPO_PUBLIC_BACKEND_URL": "https://quizville-1.preview.emergentagent.com"
       },
       "android": {
         "buildType": "apk",
@@ -28,7 +28,7 @@
     "production": {
       "distribution": "store",
       "env": {
-        "EXPO_PUBLIC_BACKEND_URL": "https://citygame-1.preview.emergentagent.com"
+        "EXPO_PUBLIC_BACKEND_URL": "https://quizville-1.preview.emergentagent.com"
       },
       "android": {
         "buildType": "app-bundle",
