@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   View,
   Text,
@@ -11,11 +11,30 @@ import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { BannerAd } from '../src/components/BannerAd';
+import { getEpisodes, Episode } from '../src/services/api';
 
 const { width } = Dimensions.get('window');
 
 export default function MainMenu() {
   const router = useRouter();
+  const [openEpisodeCount, setOpenEpisodeCount] = useState<number | null>(null);
+
+  useEffect(() => {
+    loadEpisodeCount();
+  }, []);
+
+  const loadEpisodeCount = async () => {
+    try {
+      const episodes = await getEpisodes();
+      // Sadece açık (kilitli olmayan) bölümleri say
+      const openCount = episodes.filter((ep: Episode) => !ep.is_locked).length;
+      setOpenEpisodeCount(openCount);
+    } catch (e) {
+      console.error('Error loading episode count:', e);
+      // Hata durumunda varsayılan değer
+      setOpenEpisodeCount(14);
+    }
+  };
 
   return (
     <SafeAreaView style={styles.container}>
@@ -46,7 +65,9 @@ export default function MainMenu() {
             </View>
             <View style={styles.gameModeTextContainer}>
               <Text style={styles.gameModeTitle}>Bölüm Modu</Text>
-              <Text style={styles.gameModeHint}>14 bölüm • Her biri 25 soru</Text>
+              <Text style={styles.gameModeHint}>
+                {openEpisodeCount !== null ? `${openEpisodeCount} bölüm` : 'Yükleniyor...'} • Her biri 25 soru
+              </Text>
             </View>
             <Ionicons name="chevron-forward" size={24} color="rgba(255,255,255,0.6)" />
           </TouchableOpacity>
