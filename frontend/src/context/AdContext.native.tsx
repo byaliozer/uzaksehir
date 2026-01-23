@@ -1,35 +1,42 @@
-import React, { createContext, useContext, useCallback, useState, useEffect } from 'react';
+import React, { createContext, useContext, useCallback, useState, useEffect, useRef } from 'react';
 import { Platform } from 'react-native';
-import mobileAds, { MaxAdContentRating, BannerAd as RNBannerAd, BannerAdSize, InterstitialAd, AdEventType, TestIds } from 'react-native-google-mobile-ads';
+import mobileAds, { MaxAdContentRating, InterstitialAd, RewardedAd, AdEventType, RewardedAdEventType, TestIds } from 'react-native-google-mobile-ads';
 
 // Production AdMob IDs - Uzak Şehir
 export const ADMOB_CONFIG = {
   APP_ID: 'ca-app-pub-9873123247401502~8851229017',
   BANNER_ID: 'ca-app-pub-9873123247401502/3866302125',
   INTERSTITIAL_ID: 'ca-app-pub-9873123247401502/6241377543',
+  REWARDED_ID: 'ca-app-pub-9873123247401502/9349856224',
 };
 
 // Use test IDs in development
 const isDev = __DEV__;
 const BANNER_AD_UNIT_ID = isDev ? TestIds.BANNER : ADMOB_CONFIG.BANNER_ID;
 const INTERSTITIAL_AD_UNIT_ID = isDev ? TestIds.INTERSTITIAL : ADMOB_CONFIG.INTERSTITIAL_ID;
+const REWARDED_AD_UNIT_ID = isDev ? TestIds.REWARDED : ADMOB_CONFIG.REWARDED_ID;
 
 interface AdContextType {
   showInterstitial: () => Promise<void>;
+  showRewarded: (onRewarded: () => void) => Promise<void>;
   bannerAdId: string;
   interstitialAdId: string;
+  rewardedAdId: string;
   isInterstitialReady: boolean;
+  isRewardedReady: boolean;
   isMobile: boolean;
 }
 
 const AdContext = createContext<AdContextType | undefined>(undefined);
 
-// Interstitial singleton
-let interstitialAd: InterstitialAd | null = null;
-
 export function AdProvider({ children }: { children: React.ReactNode }) {
   const [isInterstitialReady, setIsInterstitialReady] = useState(false);
+  const [isRewardedReady, setIsRewardedReady] = useState(false);
   const [adsInitialized, setAdsInitialized] = useState(false);
+  
+  const interstitialRef = useRef<InterstitialAd | null>(null);
+  const rewardedRef = useRef<RewardedAd | null>(null);
+  const rewardCallbackRef = useRef<(() => void) | null>(null);
 
   // Initialize Mobile Ads SDK
   useEffect(() => {
@@ -44,6 +51,7 @@ export function AdProvider({ children }: { children: React.ReactNode }) {
         console.log('[AdMob] SDK initialized successfully');
         setAdsInitialized(true);
         loadInterstitial();
+        loadRewarded();
       } catch (error) {
         console.error('[AdMob] SDK initialization error:', error);
       }
@@ -51,47 +59,83 @@ export function AdProvider({ children }: { children: React.ReactNode }) {
     initAds();
   }, []);
 
+  // Load Interstitial Ad
   const loadInterstitial = useCallback(() => {
     try {
-      interstitialAd = InterstitialAd.createForAdRequest(INTERSTITIAL_AD_UNIT_ID, {
+      const interstitial = InterstitialAd.createForAdRequest(INTERSTITIAL_AD_UNIT_ID, {
         keywords: ['game', 'quiz', 'trivia'],
       });
 
-      const unsubscribeLoaded = interstitialAd.addAdEventListener(AdEventType.LOADED, () => {
+      interstitial.addAdEventListener(AdEventType.LOADED, () => {
         console.log('[AdMob] Interstitial loaded');
         setIsInterstitialReady(true);
       });
 
-      const unsubscribeClosed = interstitialAd.addAdEventListener(AdEventType.CLOSED, () => {
+      interstitial.addAdEventListener(AdEventType.CLOSED, () => {
         console.log('[AdMob] Interstitial closed');
         setIsInterstitialReady(false);
-        // Load next ad
+        interstitialRef.current = null;
         setTimeout(loadInterstitial, 1000);
       });
 
-      const unsubscribeError = interstitialAd.addAdEventListener(AdEventType.ERROR, (error) => {
+      interstitial.addAdEventListener(AdEventType.ERROR, (error) => {
         console.error('[AdMob] Interstitial error:', error);
         setIsInterstitialReady(false);
-        // Retry after delay
         setTimeout(loadInterstitial, 30000);
       });
 
-      interstitialAd.load();
-
-      return () => {
-        unsubscribeLoaded();
-        unsubscribeClosed();
-        unsubscribeError();
-      };
+      interstitial.load();
+      interstitialRef.current = interstitial;
     } catch (error) {
       console.error('[AdMob] Error creating interstitial:', error);
     }
   }, []);
 
+  // Load Rewarded Ad
+  const loadRewarded = useCallback(() => {
+    try {
+      const rewarded = RewardedAd.createForAdRequest(REWARDED_AD_UNIT_ID, {
+        keywords: ['game', 'quiz', 'trivia'],
+      });
+
+      rewarded.addAdEventListener(RewardedAdEventType.LOADED, () => {
+        console.log('[AdMob] Rewarded loaded');
+        setIsRewardedReady(true);
+      });
+
+      rewarded.addAdEventListener(RewardedAdEventType.EARNED_REWARD, (reward) => {
+        console.log('[AdMob] Reward earned:', reward);
+        if (rewardCallbackRef.current) {
+          rewardCallbackRef.current();
+          rewardCallbackRef.current = null;
+        }
+      });
+
+      rewarded.addAdEventListener(AdEventType.CLOSED, () => {
+        console.log('[AdMob] Rewarded closed');
+        setIsRewardedReady(false);
+        rewardedRef.current = null;
+        setTimeout(loadRewarded, 1000);
+      });
+
+      rewarded.addAdEventListener(AdEventType.ERROR, (error) => {
+        console.error('[AdMob] Rewarded error:', error);
+        setIsRewardedReady(false);
+        setTimeout(loadRewarded, 30000);
+      });
+
+      rewarded.load();
+      rewardedRef.current = rewarded;
+    } catch (error) {
+      console.error('[AdMob] Error creating rewarded:', error);
+    }
+  }, []);
+
+  // Show Interstitial
   const showInterstitial = useCallback(async () => {
-    if (interstitialAd && isInterstitialReady) {
+    if (interstitialRef.current && isInterstitialReady) {
       try {
-        await interstitialAd.show();
+        await interstitialRef.current.show();
         console.log('[AdMob] Interstitial shown');
       } catch (error) {
         console.error('[AdMob] Error showing interstitial:', error);
@@ -101,12 +145,31 @@ export function AdProvider({ children }: { children: React.ReactNode }) {
     }
   }, [isInterstitialReady]);
 
+  // Show Rewarded
+  const showRewarded = useCallback(async (onRewarded: () => void) => {
+    if (rewardedRef.current && isRewardedReady) {
+      try {
+        rewardCallbackRef.current = onRewarded;
+        await rewardedRef.current.show();
+        console.log('[AdMob] Rewarded shown');
+      } catch (error) {
+        console.error('[AdMob] Error showing rewarded:', error);
+        rewardCallbackRef.current = null;
+      }
+    } else {
+      console.log('[AdMob] Rewarded not ready');
+    }
+  }, [isRewardedReady]);
+
   return (
     <AdContext.Provider value={{
       showInterstitial,
+      showRewarded,
       bannerAdId: BANNER_AD_UNIT_ID,
       interstitialAdId: INTERSTITIAL_AD_UNIT_ID,
+      rewardedAdId: REWARDED_AD_UNIT_ID,
       isInterstitialReady,
+      isRewardedReady,
       isMobile: true,
     }}>
       {children}
