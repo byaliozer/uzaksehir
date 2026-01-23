@@ -1,39 +1,48 @@
-import React from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   View,
   Text,
   TouchableOpacity,
   StyleSheet,
   Animated,
+  Alert,
 } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useAds } from '../src/context/AdContext';
 import { BannerAd } from '../src/components/BannerAd';
-import { useEffect, useRef } from 'react';
+import { submitEpisodeScore, submitMixedScore } from '../src/services/api';
 
 export default function ResultScreen() {
   const params = useLocalSearchParams();
   const router = useRouter();
-  const { showInterstitial } = useAds();
+  const { showInterstitial, showRewarded, isRewardedReady } = useAds();
   
   const mode = params.mode as string || 'episode';
   const episodeId = parseInt(params.episodeId as string) || 1;
-  const score = parseInt(params.score as string) || 0;
+  const initialScore = parseInt(params.score as string) || 0;
   const correctCount = parseInt(params.correctCount as string) || 0;
   const speedBonus = parseInt(params.speedBonus as string) || 0;
   const totalQuestions = parseInt(params.totalQuestions as string) || 25;
   const questionsAnswered = parseInt(params.questionsAnswered as string) || 0;
   const isNewRecord = params.isNewRecord === '1';
-  const bestScore = parseInt(params.bestScore as string) || score;
+  const bestScore = parseInt(params.bestScore as string) || initialScore;
+  
+  const [score, setScore] = useState(initialScore);
+  const [hasUsedMultiplier, setHasUsedMultiplier] = useState(false);
+  const [interstitialShown, setInterstitialShown] = useState(false);
   
   const scaleAnim = useRef(new Animated.Value(0)).current;
   const sparkleAnim = useRef(new Animated.Value(0)).current;
+  const multiplierAnim = useRef(new Animated.Value(1)).current;
 
   useEffect(() => {
-    // Show interstitial ad
-    showInterstitial();
+    // Oyun sonu geçiş reklamını göster
+    if (!interstitialShown) {
+      showInterstitial();
+      setInterstitialShown(true);
+    }
     
     // Animate score
     Animated.spring(scaleAnim, {
@@ -52,7 +61,43 @@ export default function ResultScreen() {
         ])
       ).start();
     }
+    
+    // Pulse animation for multiplier button
+    Animated.loop(
+      Animated.sequence([
+        Animated.timing(multiplierAnim, { toValue: 1.1, duration: 600, useNativeDriver: true }),
+        Animated.timing(multiplierAnim, { toValue: 1, duration: 600, useNativeDriver: true }),
+      ])
+    ).start();
   }, []);
+
+  // 3X Ödüllü reklam izle
+  const handleWatchAd = async () => {
+    if (hasUsedMultiplier) {
+      Alert.alert('Zaten Kullanıldı', 'Bu oyunda zaten 3X bonus kullandınız!');
+      return;
+    }
+
+    await showRewarded(async () => {
+      // Reklam izlendi, puanı 3'e katla
+      const newScore = score * 3;
+      setScore(newScore);
+      setHasUsedMultiplier(true);
+      
+      // Yeni skoru backend'e kaydet
+      try {
+        if (mode === 'mixed') {
+          await submitMixedScore(newScore, correctCount, speedBonus, questionsAnswered);
+        } else {
+          await submitEpisodeScore(episodeId, newScore, correctCount, speedBonus);
+        }
+      } catch (e) {
+        console.error('Error updating score:', e);
+      }
+      
+      Alert.alert('🎉 Tebrikler!', `Puanınız 3X katlandı!\n${initialScore} → ${newScore}`);
+    });
+  };
 
   const handleNextEpisode = () => {
     if (episodeId < 14) {
@@ -89,10 +134,29 @@ export default function ResultScreen() {
           </Animated.View>
         )}
 
-        {/* Score */}
+        {/* Score with 3X Button */}
         <Animated.View style={[styles.scoreContainer, { transform: [{ scale: scaleAnim }] }]}>
           <Text style={styles.scoreLabel}>SKOR</Text>
-          <Text style={styles.scoreValue}>{score}</Text>
+          <View style={styles.scoreRow}>
+            <Text style={[styles.scoreValue, hasUsedMultiplier && styles.multipliedScore]}>
+              {score}
+            </Text>
+            {!hasUsedMultiplier && (
+              <Animated.View style={{ transform: [{ scale: multiplierAnim }] }}>
+                <TouchableOpacity 
+                  style={styles.multiplierButton} 
+                  onPress={handleWatchAd}
+                  activeOpacity={0.8}
+                >
+                  <Ionicons name="videocam" size={18} color="#fff" />
+                  <Text style={styles.multiplierText}>3X</Text>
+                </TouchableOpacity>
+              </Animated.View>
+            )}
+          </View>
+          {hasUsedMultiplier && (
+            <Text style={styles.multipliedLabel}>3X BONUS UYGULANDI!</Text>
+          )}
         </Animated.View>
 
         {/* Stats */}
@@ -129,12 +193,12 @@ export default function ResultScreen() {
           <Text style={styles.bestScoreLabel}>
             {mode === 'episode' ? `${episodeId}. Bölüm En İyi Skor` : 'Karışık Mod En İyi'}
           </Text>
-          <Text style={styles.bestScoreValue}>{bestScore}</Text>
+          <Text style={styles.bestScoreValue}>{Math.max(bestScore, score)}</Text>
         </View>
 
         {/* Buttons */}
         <View style={styles.buttonsContainer}>
-          {mode === 'episode' && episodeId < 14 && (
+          {mode === 'episode' && episodeId < 17 && (
             <TouchableOpacity style={styles.primaryButton} onPress={handleNextEpisode}>
               <Ionicons name="arrow-forward" size={24} color="#fff" />
               <Text style={styles.primaryButtonText}>Sonraki Bölüm</Text>
@@ -158,6 +222,7 @@ export default function ResultScreen() {
         </View>
       </View>
 
+      {/* Banner Ad */}
       <BannerAd />
     </SafeAreaView>
   );
@@ -199,10 +264,43 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     letterSpacing: 2,
   },
+  scoreRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 16,
+  },
   scoreValue: {
     fontSize: 72,
     fontWeight: 'bold',
     color: '#fff',
+  },
+  multipliedScore: {
+    color: '#4caf50',
+  },
+  multiplierButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#ff9800',
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 20,
+    gap: 6,
+    shadowColor: '#ff9800',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.4,
+    shadowRadius: 8,
+    elevation: 6,
+  },
+  multiplierText: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#fff',
+  },
+  multipliedLabel: {
+    fontSize: 14,
+    color: '#4caf50',
+    fontWeight: 'bold',
+    marginTop: 8,
   },
   statsContainer: {
     flexDirection: 'row',
