@@ -514,6 +514,9 @@ export default function QuizScreen() {
           );
         })}
       </Animated.View>
+
+      {/* Banner Ad - Oyun içinde de görünür */}
+      <BannerAd />
     </SafeAreaView>
   );
 }
