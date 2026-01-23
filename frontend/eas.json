@@ -12,7 +12,7 @@
       },
       "android": {
         "buildType": "apk",
-        "credentialsSource": "local"
+        "withoutCredentials": true
       }
     },
     "preview": {
@@ -22,7 +22,7 @@
       },
       "android": {
         "buildType": "apk",
-        "credentialsSource": "local"
+        "withoutCredentials": true
       }
     },
     "production": {
@@ -32,7 +32,7 @@
       },
       "android": {
         "buildType": "app-bundle",
-        "credentialsSource": "local"
+        "credentialsSource": "remote"
       }
     }
   },
