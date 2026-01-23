@@ -23,6 +23,7 @@ import {
   Question,
 } from '../src/services/api';
 import { useSound } from '../src/context/SoundContext';
+import { BannerAd } from '../src/components/BannerAd';
 
 export default function QuizScreen() {
   const params = useLocalSearchParams();
