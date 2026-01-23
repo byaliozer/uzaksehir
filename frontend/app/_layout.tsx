@@ -5,7 +5,6 @@ import { SoundProvider } from '../src/context/SoundContext';
 import { AdProvider } from '../src/context/AdContext';
 import { View, ActivityIndicator, StyleSheet } from 'react-native';
 import { hasUsername } from '../src/services/api';
-import { useFocusEffect } from '@react-navigation/native';
 
 function RootLayoutNav() {
   const [isLoading, setIsLoading] = useState(true);
