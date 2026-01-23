@@ -12,11 +12,13 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { BannerAd } from '../src/components/BannerAd';
 import { getEpisodes, Episode } from '../src/services/api';
+import { useAds } from '../src/context/AdContext';
 
 const { width } = Dimensions.get('window');
 
 export default function MainMenu() {
   const router = useRouter();
+  const { showInterstitial } = useAds();
   const [openEpisodeCount, setOpenEpisodeCount] = useState<number | null>(null);
 
   useEffect(() => {
@@ -34,6 +36,12 @@ export default function MainMenu() {
       // Hata durumunda varsayılan değer
       setOpenEpisodeCount(14);
     }
+  };
+
+  // Ayarlara basınca geçiş reklamı göster
+  const handleSettingsPress = async () => {
+    await showInterstitial();
+    router.push('/settings');
   };
 
   return (
@@ -106,7 +114,7 @@ export default function MainMenu() {
 
           <TouchableOpacity
             style={styles.utilityButton}
-            onPress={() => router.push('/settings')}
+            onPress={handleSettingsPress}
             activeOpacity={0.7}
           >
             <Ionicons name="settings" size={22} color="#888" />
