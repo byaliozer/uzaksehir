@@ -145,10 +145,10 @@ export default function LeaderboardScreen() {
           <Text style={styles.episodeText}>{selectedEpisode}. Bölüm</Text>
           <TouchableOpacity
             style={styles.episodeArrow}
-            onPress={() => setSelectedEpisode(Math.min(14, selectedEpisode + 1))}
-            disabled={selectedEpisode >= 14}
+            onPress={() => setSelectedEpisode(Math.min(totalEpisodes, selectedEpisode + 1))}
+            disabled={selectedEpisode >= totalEpisodes}
           >
-            <Ionicons name="chevron-forward" size={24} color={selectedEpisode >= 14 ? '#444' : '#fff'} />
+            <Ionicons name="chevron-forward" size={24} color={selectedEpisode >= totalEpisodes ? '#444' : '#fff'} />
           </TouchableOpacity>
         </View>
       )}
