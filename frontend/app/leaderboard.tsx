@@ -34,10 +34,26 @@ export default function LeaderboardScreen() {
   const [selectedEpisode, setSelectedEpisode] = useState(initialEpisode);
   const [data, setData] = useState<LeaderboardResponse | null>(null);
   const [loading, setLoading] = useState(true);
+  const [totalEpisodes, setTotalEpisodes] = useState(14); // Dinamik bölüm sayısı
+
+  useEffect(() => {
+    loadEpisodeCount();
+  }, []);
 
   useEffect(() => {
     loadData();
   }, [activeTab, selectedEpisode]);
+
+  const loadEpisodeCount = async () => {
+    try {
+      const episodes = await getEpisodes();
+      if (episodes.length > 0) {
+        setTotalEpisodes(episodes.length);
+      }
+    } catch (e) {
+      console.error('Error loading episode count:', e);
+    }
+  };
 
   const loadData = async () => {
     setLoading(true);
