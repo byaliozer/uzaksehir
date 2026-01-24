@@ -541,7 +541,11 @@ async def get_general_leaderboard(player_name: Optional[str] = None):
 @api_router.get("/leaderboard/episode/{episode_id}", response_model=LeaderboardResponse)
 async def get_episode_leaderboard(episode_id: int, player_name: Optional[str] = None):
     """Get leaderboard for specific episode"""
-    if episode_id < 1 or episode_id > 14:
+    # Validate episode_id dynamically from Google Sheets
+    episodes = await get_episodes_data()
+    valid_episode_ids = [e.id for e in episodes]
+    
+    if episode_id not in valid_episode_ids:
         raise HTTPException(status_code=400, detail="Geçersiz bölüm ID")
     
     collection = db.episode_scores
