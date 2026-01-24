@@ -2,7 +2,7 @@
   "expo": {
     "name": "Uzak Şehir",
     "slug": "uzaksehir",
-    "version": "1.0.2",
+    "version": "1.0.3",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
     "scheme": "uzaksehir",
@@ -30,7 +30,7 @@
     },
     "android": {
       "package": "com.busegame.uzaksehir",
-      "versionCode": 2,
+      "versionCode": 3,
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/adaptive-icon.png",
         "backgroundColor": "#1CB0F6"

@@ -169,7 +169,7 @@ export default function SettingsScreen() {
           </TouchableOpacity>
         </View>
 
-        <Text style={styles.version}>Versiyon 1.0.2</Text>
+        <Text style={styles.version}>Versiyon 1.0.3</Text>
       </View>
     </SafeAreaView>
   );
