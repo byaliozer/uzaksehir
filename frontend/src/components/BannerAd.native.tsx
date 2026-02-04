@@ -3,7 +3,7 @@ import { View, StyleSheet, Platform } from 'react-native';
 import { BannerAd as RNBannerAd, BannerAdSize, TestIds } from 'react-native-google-mobile-ads';
 
 // Production Banner ID - Uzak Şehir
-const BANNER_ID = 'ca-app-pub-9873123247401502/3866302125';
+const BANNER_ID = 'ca-app-pub-6962478203802216/2229232887';
 
 // Use test ID in development
 const isDev = __DEV__;

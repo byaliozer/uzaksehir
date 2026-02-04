@@ -12,7 +12,7 @@
       "supportsTablet": true,
       "bundleIdentifier": "com.busegame.uzaksehir",
       "infoPlist": {
-        "GADApplicationIdentifier": "ca-app-pub-9873123247401502~8851229017",
+        "GADApplicationIdentifier": "ca-app-pub-6962478203802216~6360049587",
         "SKAdNetworkItems": [
           { "SKAdNetworkIdentifier": "cstr6suwn9.skadnetwork" },
           { "SKAdNetworkIdentifier": "4fzdc2evr5.skadnetwork" },
@@ -72,8 +72,8 @@
       [
         "react-native-google-mobile-ads",
         {
-          "androidAppId": "ca-app-pub-9873123247401502~8851229017",
-          "iosAppId": "ca-app-pub-9873123247401502~8851229017"
+          "androidAppId": "ca-app-pub-6962478203802216~6360049587",
+          "iosAppId": "ca-app-pub-6962478203802216~6360049587"
         }
       ]
     ],
