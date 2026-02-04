@@ -6,10 +6,10 @@ import { Platform } from 'react-native';
 
 // AdMob Configuration - Uzak Şehir
 export const ADMOB_IDS = {
-  APP_ID: 'ca-app-pub-9873123247401502~8851229017',
-  BANNER_ID: 'ca-app-pub-9873123247401502/3866302125',
-  INTERSTITIAL_ID: 'ca-app-pub-9873123247401502/6241377543',
-  REWARDED_ID: 'ca-app-pub-9873123247401502/9349856224',
+  APP_ID: 'ca-app-pub-6962478203802216~6360049587',
+  BANNER_ID: 'ca-app-pub-6962478203802216/2229232887',
+  INTERSTITIAL_ID: 'ca-app-pub-6962478203802216/3178626126',
+  REWARDED_ID: 'ca-app-pub-6962478203802216/7018525139',
 };
 
 // Test IDs for development
